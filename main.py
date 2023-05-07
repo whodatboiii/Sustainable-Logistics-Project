@@ -2,13 +2,37 @@ import ortools
 import pandas as pd
 import openpyxl
 import warnings
+import numpy as np
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 from math import radians, sin, cos, sqrt, atan2
 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
-def project_data():
+def generate_random_customers(center_lat, center_lon, min_radius, max_radius, num_customers):
+    """Generate random customer positions within a circle with radius around a center point."""
+    radii = np.random.uniform(min_radius, max_radius, num_customers)
+    angles = np.random.uniform(0, 2 * np.pi, num_customers)
+    
+    customer_lats = center_lat + (radii * np.sin(angles)) / 111.32
+    customer_lons = center_lon + (radii * np.cos(angles)) / (111.32 * np.cos(np.radians(center_lat)))
+
+    customers = pd.DataFrame({'lat': customer_lats, 'lon': customer_lons})
+    return customers
+
+def generate_all_customers(locations, min_radius, max_radius, num_customers_per_station):
+    all_customers = []
+
+    for _, location in locations.iterrows():
+        station_customers = generate_random_customers(location['lat'], location['lon'], min_radius, max_radius, num_customers_per_station)
+        all_customers.append(station_customers)
+
+    all_customers_df = pd.concat(all_customers, ignore_index=True)
+    all_customers_df['id'] = np.arange(1, len(all_customers_df) + 1)
+    
+    return all_customers_df
+
+def project_data(num_customers_per_station=100):
     """Import the data"""
     database = pd.read_excel(
         "Flowmap CH 01.01.2022 - 31.10.2022.xlsx", sheet_name="Netz Bern 01.01.22 - 31.12.22",
@@ -17,9 +41,21 @@ def project_data():
     locations = pd.read_excel(
         "Flowmap CH 01.01.2022 - 31.10.2022.xlsx", sheet_name="locations",
         names=['id', 'name', 'lat', 'lon'])
-
+    
+    # Remove rows where origin and dest are the same
+    database = database.loc[database['origin'] != database['dest']]
+    
+    # Select a random sample of 5 stations
     locations = locations.sample(n=5, random_state=1)
-    return database, locations
+
+    # Convert meters to kilometers
+    min_radius = 100 / 1000
+    max_radius = 150 / 1000
+
+    # Generate customer positions
+    customers = generate_all_customers(locations, min_radius, max_radius, num_customers_per_station)
+
+    return database, locations, customers
 
 def add_warehouse(locations, warehouse_loc):
     locations = pd.concat([locations, warehouse_loc], ignore_index=True)
@@ -80,7 +116,7 @@ def demand_callback(database, manager, node):
     return database.at[node, 'count']
 
 def modelling():
-    database, locations = project_data()
+    database, locations, customers = project_data()
 
     warehouse_loc = pd.DataFrame({'id': ['9999'], 'name': ['Warehouse'], 'lat': ['46.9489'], 'lon': ['7.4378']})
     locations = add_warehouse(locations, warehouse_loc)
@@ -126,4 +162,5 @@ def modelling():
 
 if __name__ == '__main__':
     modelling()
+
 
