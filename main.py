@@ -122,7 +122,7 @@ def modelling():
         print_solution(manager=manager, routing=model, solution=solution, locations=locations, database=database)
     else:
         print('No solution found.')
-
+        
 
 if __name__ == '__main__':
     modelling()
