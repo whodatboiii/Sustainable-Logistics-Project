@@ -44,9 +44,13 @@ def project_data(num_customers_per_station=100):
     
     # Remove rows where origin and dest are the same
     database = database.loc[database['origin'] != database['dest']]
-    
+    print(database.head())
+
+    # Clean the locations DataFrame
+    locations = locations[locations['id'].isin(database['origin'].unique()) | locations['id'].isin(database['dest'].unique())]
+
     # Select a random sample of 5 stations
-    locations = locations.sample(n=5, random_state=1)
+    locations = locations.sample(n=10, random_state=1)
 
     # Convert meters to kilometers
     min_radius = 100 / 1000
@@ -72,7 +76,7 @@ def haversine(lat1, lon1, lat2, lon2):
     return R * c
 
 def weighted_distance_callback(manager, database, locations, from_index, to_index):
-    """Returns the weighted distance between two locations considering charging cost, popularity, and charging time."""
+    """Returns the weighted distance between two locations considering charging cost and popularity."""
     from_node = manager.IndexToNode(from_index)
     to_node = manager.IndexToNode(to_index)
     lat1, lon1 = locations.at[from_node, 'lat'], locations.at[from_node, 'lon']
@@ -80,40 +84,59 @@ def weighted_distance_callback(manager, database, locations, from_index, to_inde
     distance = haversine(lat1, lon1, lat2, lon2)
     
     if to_node != from_node:
-        popularity_weight = 1 + database.at[to_node, 'count'] / database['count'].max()
-        charge_cost = 5
-        charging_time = 0.2 * database.at[to_node, 'count']
-        weighted_distance = distance * popularity_weight + charge_cost + charging_time
+        if to_node in database.index:
+            popularity_weight = 1 + database.at[to_node, 'count'] / database['count'].max()
+            charge_cost = 5
+            charging_time = 1 * database.at[to_node, 'count']
+            weighted_distance = distance * popularity_weight + charge_cost + charging_time
+        else:
+            weighted_distance = distance
     else:
         weighted_distance = distance
 
     return int(weighted_distance)
 
 
-def print_solution(manager, routing, solution, database, locations):
+def print_solution(manager, routing, solution, locations, database):
     """Prints the solution."""
     print(f"Objective: {solution.ObjectiveValue()} units")
+    capacity_dimension = routing.GetDimensionOrDie("Capacity")
+    
     for vehicle_id in range(manager.GetNumberOfVehicles()):
         index = routing.Start(vehicle_id)
         plan_output = f"Route for vehicle {vehicle_id}:\n"
         route_distance = 0
+        route_load = 0
         while not routing.IsEnd(index):
             node_index = manager.IndexToNode(index)
             next_node_index = manager.IndexToNode(solution.Value(routing.NextVar(index)))
             route_distance += weighted_distance_callback(manager, database, locations, index, solution.Value(routing.NextVar(index)))
             current_location = locations.iloc[node_index]
             next_location = locations.iloc[next_node_index]
-            plan_output += f"{current_location['name']} ({current_location['id']}) -> "
+            
+            load = solution.Value(capacity_dimension.CumulVar(index))
+            route_load += load
+            plan_output += f"{current_location['name']} ({current_location['id']}) Load: {load} -> "
             index = solution.Value(routing.NextVar(index))
+        
         last_location = locations.iloc[manager.IndexToNode(index)]
-        plan_output += f"{last_location['name']} ({last_location['id']})\n"
+        load = solution.Value(capacity_dimension.CumulVar(index))
+        route_load += load
+        plan_output += f"{last_location['name']} ({last_location['id']}) Load: {load}\n"
         plan_output += f"Route distance: {route_distance} units\n"
+        plan_output += f"Load of the route: {route_load}\n"
+        
         print(plan_output)
 
 
+
+
 def demand_callback(database, manager, node):
-    """Returns the demand of a node."""
-    return database.at[node, 'count']
+    """Returns the demand of the node."""
+    if node == manager.GetNumberOfNodes() - 1:  # Warehouse
+        return 0
+    return database.iloc[node]['count']
+
 
 def modelling():
     database, locations, customers = project_data()
@@ -124,7 +147,7 @@ def modelling():
     # Create the routing model
     num_nodes = len(locations)
     depot_index = num_nodes - 1
-    num_vehicles = 15
+    num_vehicles = 3
     manager = pywrapcp.RoutingIndexManager(num_nodes, num_vehicles, depot_index)
     model = pywrapcp.RoutingModel(manager)
 
@@ -136,6 +159,8 @@ def modelling():
 
     # Define the demand callback
     demand_callback_index = model.RegisterUnaryTransitCallback(lambda index: demand_callback(database, manager, manager.IndexToNode(index)))
+    for i in range(manager.GetNumberOfNodes()):
+        print(f"Node {i}: demand {demand_callback(database, manager, i)}")
 
     # Set the demand function
     model.AddDimensionWithVehicleCapacity(
@@ -148,8 +173,10 @@ def modelling():
 
     # Solve the problem
     search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-    search_parameters.first_solution_strategy = (routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC)
-    search_parameters.time_limit.seconds = 120  # Set time limit to 60 seconds
+    search_parameters.first_solution_strategy = (
+        routing_enums_pb2.FirstSolutionStrategy.PARALLEL_CHEAPEST_INSERTION)
+    search_parameters.time_limit.seconds = 120  # Set time limit to 120 seconds
+    search_parameters.log_search = False
 
     solution = model.SolveWithParameters(search_parameters)
 
