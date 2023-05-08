@@ -49,7 +49,7 @@ def project_data(num_customers_per_station=100):
     locations = locations[locations['id'].isin(database['origin'].unique()) | locations['id'].isin(database['dest'].unique())]
 
     # Select a random sample of 5 stations
-    locations = locations.sample(n=15, random_state=1)
+    locations = locations.sample(n=15, random_state=42069)
 
     # Convert meters to kilometers
     min_radius = 100 / 1000
@@ -85,7 +85,7 @@ def weighted_distance_callback(manager, database, locations, from_index, to_inde
     if to_node != from_node:
         if to_node in database.index:
             popularity_weight = 1 + database.at[to_node, 'count'] / database['count'].max()
-            charge_cost = 5
+            charge_cost = 5 #arbitrary
             charging_time = 1 * database.at[to_node, 'count']
             weighted_distance = distance * popularity_weight + charge_cost + charging_time
         else:
@@ -115,15 +115,14 @@ def print_solution(manager, routing, solution, locations, database):
             
             load = solution.Value(capacity_dimension.CumulVar(index))
             route_load += load
-            plan_output += f"{current_location['name']} ({current_location['id']}) Load: {load} -> "
+            plan_output += f"(Cur. Load: {load}) {current_location['name']} ({current_location['id']}) -> "
             index = solution.Value(routing.NextVar(index))
         
         last_location = locations.iloc[manager.IndexToNode(index)]
-        load = solution.Value(capacity_dimension.CumulVar(index))
-        route_load += load
-        plan_output += f"{last_location['name']} ({last_location['id']}) Load: {load}\n"
+        last_load = solution.Value(capacity_dimension.CumulVar(index))
+        plan_output += f"{last_location['name']} ({last_location['id']}) Load: {last_load}\n"
         plan_output += f"Route distance: {route_distance} units\n"
-        plan_output += f"Load of the route: {route_load}\n"
+        plan_output += f"Total load of the route: {last_load}\n"
         
         print(plan_output)
 
