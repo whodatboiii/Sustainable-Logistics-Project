@@ -44,7 +44,6 @@ def project_data(num_customers_per_station=100):
     
     # Remove rows where origin and dest are the same
     database = database.loc[database['origin'] != database['dest']]
-    print(database.head())
 
     # Clean the locations DataFrame
     locations = locations[locations['id'].isin(database['origin'].unique()) | locations['id'].isin(database['dest'].unique())]
@@ -129,8 +128,6 @@ def print_solution(manager, routing, solution, locations, database):
         print(plan_output)
 
 
-
-
 def demand_callback(database, manager, node):
     """Returns the demand of the node."""
     if node == manager.GetNumberOfNodes() - 1:  # Warehouse
@@ -159,8 +156,8 @@ def modelling():
 
     # Define the demand callback
     demand_callback_index = model.RegisterUnaryTransitCallback(lambda index: demand_callback(database, manager, manager.IndexToNode(index)))
-    for i in range(manager.GetNumberOfNodes()):
-        print(f"Node {i}: demand {demand_callback(database, manager, i)}")
+    #for i in range(manager.GetNumberOfNodes()):
+    #    print(f"Node {i}: demand {demand_callback(database, manager, i)}")
 
     # Set the demand function
     model.AddDimensionWithVehicleCapacity(
