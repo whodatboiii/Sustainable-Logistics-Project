@@ -49,7 +49,7 @@ def project_data(num_customers_per_station=100):
     locations = locations[locations['id'].isin(database['origin'].unique()) | locations['id'].isin(database['dest'].unique())]
 
     # Select a random sample of 5 stations
-    locations = locations.sample(n=10, random_state=1)
+    locations = locations.sample(n=15, random_state=1)
 
     # Convert meters to kilometers
     min_radius = 100 / 1000
