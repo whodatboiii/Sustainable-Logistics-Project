@@ -128,7 +128,7 @@ def main():
   customers = list(range(num_customers))
 
   num_stations = 100
-  stations = list(range(num_warehouses))
+  stations = list(range(num_stations))
     
   demand = list(range(num_customers))
   for i in range(num_customers):
