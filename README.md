@@ -34,3 +34,34 @@ Each station can serve a limited number of demand points based on the number of 
 1.1 Eliminate all the rows where origin=dest 
 1.2 Select the 100 (ex) busiest stations 
 1.3 Generate a certain number of customer points at a perimeter between 100-500m)
+
+#### RETRIEVED COMMENT
+
+Parameters to add :
+**Coûts vélo **
+Entre 900-3500$ ( purchasing cost,docking station(lock the bike ? ), maintenance equipment)
+source: https://cff-prod.s3.amazonaws.com/storage/files/ZcBkyUB3K1YL4MzzkjS76l9G2PypVK23TnO70viG.pdf
+
+or
+Coûts (Vélo + Station) : $3000-$5000
+https://www.itskrs.its.dot.gov/its/benecost.nsf/ID/f72abdbb00d6ebb58525856d0060feea
+or
+Coût( admin and op) : average of $4,200-5,400 per bicycle, including all system components, staff and administrative.
+
+**Coût chargement **
+Elec en Suisse : 0,2695.-/kWatth
+source : https://www.admin.ch/gov/fr/accueil/documentation/communiques.msg-id-90237.html
+Puissance vélo : 250W ( normes européennes)
+source : https://cosmoconnected.com/blogs/news/puissance-velo-electrique#:~:text=Puissance%20de%20v%C3%A9lo%20%C3%A9lectrique%20%3A%20que,%C3%AAtre%20limit%C3%A9e%20%C3%A0%20250%20Watts.
+Temps de charge : 6h
+Coût total : 0.1010.- / chargement / vélo
+Puissance de la batterie : 375 Wh
+source: https://www.publibike.ch/fr/velos
+
+Capacité vélo
+Distance : 50km
+source https://www.cyclable.com/quelle-est-lautonomie-de-mon-velo-electrique/
+
+Capacité camion
+
+Time required pour changer les vélo
