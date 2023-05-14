@@ -122,7 +122,7 @@ for i in range(num_stations):
 capacity[i] = [random.randint(30, 40) for _ in range(num_stations)]
 print(capacity)
 
-#Modeling 
+#MODELING
 
 def main():
   # Create the solver.
@@ -154,7 +154,7 @@ def main():
   z = solver.IntVar(0, 1000, 'z')
 
 
-  #Constraints 
+  #CONSTRAINTS
 
   #Path[i,j] = 1 if customer i is allocated to be served by warehouse j
   for c in customers:
@@ -164,13 +164,39 @@ def main():
   #Fixes the number of plants to p (15)
   solver.Add(solver.Sum(open) <= p) 
     
-    
   #No more than one warehouse must be assigned to each customer. Warehouse w is assigned to c only if w has been declared open in the solution
   for c in customers:
     for s in stations:
       solver.Add(path[c, s] <= open[s])
+    
+  #Maximum distance contraint 
+  max_distance = 1000  #A set nous meme 
+  for c in customers:
+    for s in stations:
+        solver.Add(path[c, s] * distance[c][s] <= max_distance)
 
-  
+  #Pourcentage of customers demands are met
+  min_service_level = 0.7  # Set an appropriate value between 0 and 1
+    solver.Add(solver.Sum([path[c, s] * demand[c] for c in customers for s in stations]) >= min_service_level * sum(demand))
+
+    
+  #Calculate the total number of bicycles for each station
+  total_bikes_per_station = [solver.Sum([path[c, s] * demand[c] for c in customers]) for s in stations]
+
+  #Calculate the total number of bicycles in the system
+  total_bikes = solver.Sum(total_bikes_per_station)
+
+  #Define the necessary cost parameters
+  bicycle_cost = 4300
+  charge_cost_per_bike = 0.40425
+  num_charges = 50  # Set an appropriate value 
+  max_budget = 100000  # Set an appropriate value
+
+  #Add the cost constraint to the model
+  total_cost = (bicycle_cost * total_bikes) + (charge_cost_per_bike * total_bikes * num_charges)
+  solver.Add(total_cost <= max_budget)
+    
+    
   #Set the objective function 
 
   # objective function : Minimization of the demand weighted distance between facilities and customers (demand of customer i X distance between i and j X points i allocated to facilities) 
