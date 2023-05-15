@@ -1,11 +1,10 @@
-pip install ortools
+from __future__ import print_function
 import ortools
 import pandas as pd
 import numpy as np
 import openpyxl
 import warnings
 import random
-from __future__ import print_function
 from ortools.sat.python import cp_model as cp
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
@@ -17,22 +16,20 @@ from geopy.distance import distance
 warnings.simplefilter(action='ignore', category=UserWarning)
 
 
-def project_data():
+def project_data(num_customers_per_station=100):
     """Import the data"""
-    
-    demand  = pd.read_excel('/content/drive/MyDrive/Sustainable_logistics/Publike_bern.xlsx' , sheet_name = "demand",
-        names = ['origin', 'dest', 'count']
-    ) 
-    
-    
-    locations = pd.read_excel('/content/drive/MyDrive/Sustainable_logistics/Publike_bern.xlsx'
-        , sheet_name = "locations",
-        names = ['id', 'name', 'lat', 'lon']
-    ) 
+    database = pd.read_excel(
+        "Flowmap CH 01.01.2022 - 31.10.2022.xlsx", sheet_name="Netz Bern 01.01.22 - 31.12.22",
+        names=['origin', 'dest', 'count'])
 
+    locations = pd.read_excel(
+        "Flowmap CH 01.01.2022 - 31.10.2022.xlsx", sheet_name="locations",
+        names=['id', 'name', 'lat', 'lon'])
+
+    return database, locations
+
+demand, locations = project_data()
  
-    
-    return demand,locations
 
 demand,locations = project_data()
 
@@ -115,13 +112,6 @@ for i in range(num_customers):
   demand[i] = 1
 print(demand)
 
-#Capacity of our stations 
-
-capacity = list(range(num_stations))
-for i in range(num_stations):
-capacity[i] = [random.randint(30, 40) for _ in range(num_stations)]
-print(capacity)
-
 #MODELING
 
 def main():
@@ -177,7 +167,8 @@ def main():
 
   #Pourcentage of customers demands are met
   min_service_level = 0.7  # Set an appropriate value between 0 and 1
-    solver.Add(solver.Sum([path[c, s] * demand[c] for c in customers for s in stations]) >= min_service_level * sum(demand))
+  solver.Add(solver.Sum([path[c, s] * demand[c] for c in customers for s in stations]) >= int(min_service_level * sum(demand)))
+
 
     
   #Calculate the total number of bicycles for each station
