@@ -51,8 +51,8 @@ def project_data(num_customers_per_station=100):
     # Clean the locations DataFrame
     locations = locations[locations['id'].isin(database['origin'].unique()) | locations['id'].isin(database['dest'].unique())]
 
-    # Select a random sample of 5 stations
-    locations = locations.sample(n=15, random_state=42069)
+    # Select a random sample of 15 stations
+    locations = locations.sample(n=15, random_state=5)
 
     # Convert meters to kilometers
     min_radius = 100 / 1000
@@ -85,6 +85,7 @@ def weighted_distance_callback(manager, database, locations, from_index, to_inde
     lat2, lon2 = locations.at[to_node, 'lat'], locations.at[to_node, 'lon']
     distance = haversine(lat1, lon1, lat2, lon2)
     
+    #Constraints
     if to_node != from_node:
         if to_node in database.index:
             popularity_weight = 1 + database.at[to_node, 'count'] / database['count'].max()
@@ -165,7 +166,7 @@ def modelling():
     model.AddDimensionWithVehicleCapacity(
         demand_callback_index,
         0,  # null capacity slack
-        [200] * num_vehicles,  # vehicle capacity of 200 bike batteries
+        [250] * num_vehicles,  # vehicle capacity of 200 bike batteries
         True,  # start cumul to zero
         "Capacity"
     )
