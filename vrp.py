@@ -35,7 +35,7 @@ def generate_all_customers(locations, min_radius, max_radius, num_customers_per_
     
     return all_customers_df
 
-def project_data(num_customers_per_station=200):
+def project_data(num_customers_per_station=100):
     """Import the data"""
     database2 = pd.read_excel(
         "Flowmap CH 01.01.2022 - 31.10.2022.xlsx", sheet_name="Netz Bern 01.01.22 - 31.12.22",
@@ -98,7 +98,7 @@ def weighted_distance_callback(manager, database, locations, from_index, to_inde
             charging_time = 1 * database.at[to_node, 'count']
             weighted_distance = distance * popularity_weight + charge_cost + charging_time
             # Generate customer positions
-            customers = generate_all_customers(locations, min_radius=1, max_radius=1, num_customers_per_station=200)
+            customers = generate_all_customers(locations, min_radius=1, max_radius=1, num_customers_per_station=100)
             weighted_distance += len(customers) # or any other function of customer numbers
         else:
             weighted_distance = distance
@@ -169,7 +169,7 @@ def modelling():
     model.AddDimensionWithVehicleCapacity(
         demand_callback_index,
         0,  # null capacity slack
-        [5000] * num_vehicles,  # vehicle capacity of 200 bike batteries
+        [16] * num_vehicles,  # vehicle capacity of 200 bike batteries
         True,  # start cumul to zero
         "Capacity"
     )
@@ -185,7 +185,7 @@ def modelling():
 
     if solution:
         # Print the solution
-        print_solution_with_customers(manager=manager, routing=model, solution=solution, locations=locations, database=database, num_customers_per_station=200)
+        print_solution_with_customers(manager=manager, routing=model, solution=solution, locations=locations, database=database, num_customers_per_station=100)
     else:
         print('No solution found.')
 

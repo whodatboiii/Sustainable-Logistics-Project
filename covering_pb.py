@@ -22,6 +22,8 @@ def project_data():
     demand = pd.read_excel(
         "Flowmap CH 01.01.2022 - 31.10.2022.xlsx", sheet_name="Netz Bern 01.01.22 - 31.12.22",
         names=['origin', 'dest', 'count'])
+    
+    print(demand.nunique())
 
     locations = pd.read_excel(
         "Flowmap CH 01.01.2022 - 31.10.2022.xlsx", sheet_name="locations",
@@ -35,6 +37,7 @@ sorted_df = demand.sort_values(by='count', ascending=False)
 sorted_df
 
 best_stations = sorted_df.iloc[:100].drop_duplicates('origin').reset_index()
+print("bbbbb", best_stations)
 
 df = best_stations.merge(locations, left_on='origin', right_on='id')
 
@@ -44,7 +47,7 @@ df.plot(x="lon", y="lat", kind="scatter",
 # Convert longitude and latitude columns to radians
 df['lat_rad'] = np.radians(df['lat'])
 df['lon_rad'] = np.radians(df['lon'])
-df
+#df
 
 # Define a function to generate points within a circle of radius r
 def generate_points(lat, lon, r, n):
@@ -118,8 +121,8 @@ def main():
   customers = 37
   customer = list(range(customers))
 
-  best_stations = 37
-  stations = list(range(best_stations))
+  best_stationsss = 37
+  stations = list(range(best_stationsss))
     
   distance = distance_matrix
   
@@ -182,11 +185,13 @@ def main():
   status = solver.Solve(model)
 
   opened = []
+  bikes = []
   if status == cp.OPTIMAL:
     print('z:', solver.Value(z))
     print('open:', [solver.Value(open[s]) for s in stations])
     opened = [solver.Value(open[s]) for s in stations]
     print('capacity:', [solver.Value(capacity[s]) for s in stations])
+    bikes = [solver.Value(capacity[s]) for s in stations]
     for c in customer:
       for s in stations:
         print(solver.Value(path[c, s]), end=' ')
@@ -198,11 +203,18 @@ def main():
 
   for station in range(len(opened)):
     if opened[station] == 1:
-      print_df = print_df.append(sorted_df.iloc[[station]])
+      print_df = print_df.append(best_stations.iloc[[station]])
+
+  # Assuming you have a dataframe named 'print_df' with an existing 'count' column
+
+  for index, bike in enumerate(bikes):
+      if bike != 0:
+          print_df.loc[index, 'count'] = bike
 
   print(print_df)
   print_df.to_csv('opti.csv', index=False)
   print('CSV created')
+
 if __name__ == '__main__':
   main()
 
