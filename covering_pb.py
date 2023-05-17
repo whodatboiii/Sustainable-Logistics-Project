@@ -1,4 +1,4 @@
-!pip install ortools
+from __future__ import print_function
 import ortools
 import pandas as pd
 import numpy as np
@@ -6,7 +6,6 @@ import openpyxl
 import warnings
 import random
 import math,sys
-from __future__ import print_function
 from ortools.sat.python import cp_model as cp
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
@@ -20,17 +19,13 @@ warnings.simplefilter(action='ignore', category=UserWarning) #stop the warnings
 def project_data():
     """Import the data"""
     
-    demand  = pd.read_excel('/content/drive/MyDrive/Sustainable_logistics/Publike_bern.xlsx' , sheet_name = "demand",
-        names = ['origin', 'dest', 'count']
-    ) 
-    
-    
-    locations = pd.read_excel('/content/drive/MyDrive/Sustainable_logistics/Publike_bern.xlsx'
-        , sheet_name = "locations",
-        names = ['id', 'name', 'lat', 'lon']
-    ) 
+    demand = pd.read_excel(
+        "Flowmap CH 01.01.2022 - 31.10.2022.xlsx", sheet_name="Netz Bern 01.01.22 - 31.12.22",
+        names=['origin', 'dest', 'count'])
 
-  
+    locations = pd.read_excel(
+        "Flowmap CH 01.01.2022 - 31.10.2022.xlsx", sheet_name="locations",
+        names=['id', 'name', 'lat', 'lon'])
     
     return demand,locations
 
