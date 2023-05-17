@@ -16,6 +16,7 @@ from geopy.distance import distance
 #Stop the warnings 
 warnings.simplefilter(action='ignore', category=UserWarning) #stop the warnings
 
+#Loading the data 
 def project_data():
     """Import the data"""
     
@@ -33,14 +34,18 @@ def project_data():
 
 demand,locations = project_data()
 
+#Sorting the stations df in descending order
 sorted_df = demand.sort_values(by='count', ascending=False)
 sorted_df
 
+#Selecting the 100 busiest stations ansd removing duplicated stations 
 best_stations = sorted_df.iloc[:100].drop_duplicates('origin').reset_index()
 print("bbbbb", best_stations)
 
+#Merging the busiest stations df and df about their location 
 df = best_stations.merge(locations, left_on='origin', right_on='id')
 
+#Visualizing the best_station data points  
 df.plot(x="lon", y="lat", kind="scatter",
         colormap="YlOrRd")
 
@@ -67,7 +72,7 @@ def generate_points(lat, lon, r, n):
         points.append((new_lat, new_lon))
     return points
 
-# Generate n points within 500 meters of each row in the DataFrame
+# Generate 1 customer point within 500 meters of each row in the DataFrame
 n = 1 # number of points to generate
 r = 0.5 # radius of circle in kilometers
 points = []
@@ -77,17 +82,18 @@ for _, row in df.iterrows():
     for p in new_points:
         points.append((row['id'], row['lat'], row['lon'], p[0], p[1]))
         
- # Convert points to a new DataFrame
+# Convert points to a new df 
 new_df = pd.DataFrame(points, columns=['id', 'orig_lat', 'orig_lon', 'new_lat', 'new_lon'])
 new_df['distance'] = new_df.apply(lambda row: geodesic((row['orig_lat'], row['orig_lon']), (row['new_lat'], row['new_lon'])).km, axis=1)
 
-# Filter points by distance
+# Keeping customer points within a radius of 0.5 from stations 
 new_df = new_df[new_df['distance'] <= 0.5]
 
 # Remove unnecessary columns
 new_df = new_df[['id', 'new_lat', 'new_lon']]
 customers = new_df.drop('id',axis=1)
 
+#Visualizing the customers data points 
 customers.plot(x="new_lon", y="new_lat", kind="scatter",
         colormap="YlOrRd")
 
@@ -111,6 +117,8 @@ distance_matrix
 demand = [random.choice([1, 2]) for _ in range(num_customers)]
 demand
 
+#Solving the covering problem 
+
 def main():
   # Create the solver.
   model = cp.CpModel()
@@ -126,10 +134,10 @@ def main():
     
   distance = distance_matrix
   
-  #maximum capacity
+  #Setting a maximum capacity for all stations 
   max_capacity= 40 
 
-  #maximum distance travelled by user 
+  #Maximum distance travelled by bike user 
   max_distance = 23 #(sqrt of 500)
 
   #Variable declaration
@@ -171,7 +179,7 @@ def main():
     for s in stations:
         model.Add(path[c, s] * distance[c][s] <= max_distance)
 
-  #Pourcentage of customers demands are met
+  #Flows correspond to capacity of every station 
   for s in stations:
     model.Add(sum(path[c, s] * demand[c] for c in customer) <= capacity[s])
 
