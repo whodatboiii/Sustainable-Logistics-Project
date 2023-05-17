@@ -35,11 +35,15 @@ def generate_all_customers(locations, min_radius, max_radius, num_customers_per_
     
     return all_customers_df
 
-def project_data(num_customers_per_station=100):
+def project_data(num_customers_per_station=200):
     """Import the data"""
-    database = pd.read_excel(
+    database2 = pd.read_excel(
         "Flowmap CH 01.01.2022 - 31.10.2022.xlsx", sheet_name="Netz Bern 01.01.22 - 31.12.22",
         names=['origin', 'dest', 'count'])
+    print('DB1', database2)
+    
+    database = pd.read_csv("opti.csv")
+    print('DB2', database)
 
     locations = pd.read_excel(
         "Flowmap CH 01.01.2022 - 31.10.2022.xlsx", sheet_name="locations",
@@ -50,9 +54,10 @@ def project_data(num_customers_per_station=100):
 
     # Clean the locations DataFrame
     locations = locations[locations['id'].isin(database['origin'].unique()) | locations['id'].isin(database['dest'].unique())]
+    print(locations)
 
     # Select a random sample of 15 stations
-    locations = locations.sample(n=15, random_state=5)
+    #locations = locations.sample(n=10, random_state=5)
 
     # Convert meters to kilometers
     min_radius = 100 / 1000
@@ -77,7 +82,7 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
-def weighted_distance_callback(manager, database, locations, from_index, to_index):
+def weighted_distance_callback(manager, database, locations, from_index, to_index, num_customers_per_station):
     """Returns the weighted distance between two locations considering charging cost and popularity."""
     from_node = manager.IndexToNode(from_index)
     to_node = manager.IndexToNode(to_index)
@@ -92,6 +97,9 @@ def weighted_distance_callback(manager, database, locations, from_index, to_inde
             charge_cost = 5 #arbitrary
             charging_time = 1 * database.at[to_node, 'count']
             weighted_distance = distance * popularity_weight + charge_cost + charging_time
+            # Generate customer positions
+            customers = generate_all_customers(locations, min_radius=1, max_radius=1, num_customers_per_station=200)
+            weighted_distance += len(customers) # or any other function of customer numbers
         else:
             weighted_distance = distance
     else:
@@ -100,7 +108,7 @@ def weighted_distance_callback(manager, database, locations, from_index, to_inde
     return int(weighted_distance)
 
 
-def print_solution(manager, routing, solution, locations, database):
+def print_solution_with_customers(manager, routing, solution, locations, database, num_customers_per_station):
     """Prints the solution."""
     print(f"Objective: {solution.ObjectiveValue()} units")
     capacity_dimension = routing.GetDimensionOrDie("Capacity")
@@ -109,17 +117,15 @@ def print_solution(manager, routing, solution, locations, database):
         index = routing.Start(vehicle_id)
         plan_output = f"Route for vehicle {vehicle_id}:\n"
         route_distance = 0
-        route_load = 0
         while not routing.IsEnd(index):
             node_index = manager.IndexToNode(index)
             next_node_index = manager.IndexToNode(solution.Value(routing.NextVar(index)))
-            route_distance += weighted_distance_callback(manager, database, locations, index, solution.Value(routing.NextVar(index)))
+            route_distance += weighted_distance_callback(manager, database, locations, index, solution.Value(routing.NextVar(index)), num_customers_per_station)
             current_location = locations.iloc[node_index]
             next_location = locations.iloc[next_node_index]
             
             load = solution.Value(capacity_dimension.CumulVar(index))
-            route_load += load
-            plan_output += f"(Cur. Load: {load}) {current_location['name']} ({current_location['id']}) -> "
+            plan_output += f"{current_location['name']} ({current_location['id']}) Load: {load} -> "
             index = solution.Value(routing.NextVar(index))
         
         last_location = locations.iloc[manager.IndexToNode(index)]
@@ -129,7 +135,6 @@ def print_solution(manager, routing, solution, locations, database):
         plan_output += f"Total load of the route: {last_load}\n"
         
         print(plan_output)
-
 
 def demand_callback(database, manager, node):
     """Returns the demand of the node."""
@@ -141,13 +146,13 @@ def demand_callback(database, manager, node):
 def modelling():
     database, locations, customers = project_data()
 
-    warehouse_loc = pd.DataFrame({'id': ['9999'], 'name': ['Warehouse'], 'lat': ['46.9489'], 'lon': ['7.4378']})
+    warehouse_loc = pd.DataFrame({'id': ['9999'], 'name': ['Warehouse'], 'lat': [46.9489], 'lon': [7.4378]})
     locations = add_warehouse(locations, warehouse_loc)
 
     # Create the routing model
     num_nodes = len(locations)
     depot_index = num_nodes - 1
-    num_vehicles = 3
+    num_vehicles = 5
     manager = pywrapcp.RoutingIndexManager(num_nodes, num_vehicles, depot_index)
     model = pywrapcp.RoutingModel(manager)
 
@@ -159,14 +164,12 @@ def modelling():
 
     # Define the demand callback
     demand_callback_index = model.RegisterUnaryTransitCallback(lambda index: demand_callback(database, manager, manager.IndexToNode(index)))
-    #for i in range(manager.GetNumberOfNodes()):
-    #    print(f"Node {i}: demand {demand_callback(database, manager, i)}")
 
     # Set the demand function
     model.AddDimensionWithVehicleCapacity(
         demand_callback_index,
         0,  # null capacity slack
-        [250] * num_vehicles,  # vehicle capacity of 200 bike batteries
+        [5000] * num_vehicles,  # vehicle capacity of 200 bike batteries
         True,  # start cumul to zero
         "Capacity"
     )
@@ -182,12 +185,10 @@ def modelling():
 
     if solution:
         # Print the solution
-        print_solution(manager=manager, routing=model, solution=solution, locations=locations, database=database)
+        print_solution_with_customers(manager=manager, routing=model, solution=solution, locations=locations, database=database, num_customers_per_station=200)
     else:
         print('No solution found.')
-        
+
 
 if __name__ == '__main__':
     modelling()
-
-

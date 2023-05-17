@@ -181,18 +181,28 @@ def main():
   solver = cp.CpSolver()
   status = solver.Solve(model)
 
+  opened = []
   if status == cp.OPTIMAL:
     print('z:', solver.Value(z))
     print('open:', [solver.Value(open[s]) for s in stations])
+    opened = [solver.Value(open[s]) for s in stations]
     print('capacity:', [solver.Value(capacity[s]) for s in stations])
     for c in customer:
       for s in stations:
         print(solver.Value(path[c, s]), end=' ')
       print()
     print()
-
   print('WallTime:', solver.WallTime())
 
+  print_df = pd.DataFrame()
+
+  for station in range(len(opened)):
+    if opened[station] == 1:
+      print_df = print_df.append(sorted_df.iloc[[station]])
+
+  print(print_df)
+  print_df.to_csv('opti.csv', index=False)
+  print('CSV created')
 if __name__ == '__main__':
   main()
 
