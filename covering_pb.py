@@ -101,6 +101,7 @@ customers.plot(x="new_lon", y="new_lat", kind="scatter",
 num_customers = len(customers)
 num_stations = len(df)
 
+#Setting the distance matrix
 distance_matrix = np.zeros((num_customers, num_stations))
 
 for i, row in customers.iterrows():
@@ -111,9 +112,11 @@ for i, row in customers.iterrows():
         distance_matrix[i, j] = dist
 print(distance_matrix)
 
+#Decreasing the order of magnitude of our distances 
 distance_matrix = [[int((sqrt(entry))) for entry in row] for row in distance_matrix]
 distance_matrix
 
+#Setting our customers demand 
 demand = [random.choice([1, 2]) for _ in range(num_customers)]
 demand
 
