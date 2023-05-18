@@ -47,7 +47,7 @@ def project_data(num_customers_per_station=100):
     database = database.loc[database['origin'] != database['dest']]
 
     # Clean the locations DataFrame
-    locations = locations[locations['id'].isin(database['origin'].unique()) | locations['id'].isin(database['dest'].unique())]
+    locations = locations[locations['id'].isin(database['origin'].unique())] # | locations['id'].isin(database['dest'].unique())]
     print(locations)
 
     # Select a random sample of 15 stations
