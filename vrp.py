@@ -37,13 +37,7 @@ def generate_all_customers(locations, min_radius, max_radius, num_customers_per_
 
 def project_data(num_customers_per_station=100):
     """Import the data"""
-    database2 = pd.read_excel(
-        "Flowmap CH 01.01.2022 - 31.10.2022.xlsx", sheet_name="Netz Bern 01.01.22 - 31.12.22",
-        names=['origin', 'dest', 'count'])
-    print('DB1', database2)
-    
     database = pd.read_csv("opti.csv")
-    print('DB2', database)
 
     locations = pd.read_excel(
         "Flowmap CH 01.01.2022 - 31.10.2022.xlsx", sheet_name="locations",
@@ -98,8 +92,8 @@ def weighted_distance_callback(manager, database, locations, from_index, to_inde
             charging_time = 1 * database.at[to_node, 'count']
             weighted_distance = distance * popularity_weight + charge_cost + charging_time
             # Generate customer positions
-            customers = generate_all_customers(locations, min_radius=1, max_radius=1, num_customers_per_station=100)
-            weighted_distance += len(customers) # or any other function of customer numbers
+            customers = generate_all_customers(locations, min_radius=0.0001, max_radius=0.1, num_customers_per_station=100)
+            weighted_distance += len(customers) 
         else:
             weighted_distance = distance
     else:
@@ -169,7 +163,7 @@ def modelling():
     model.AddDimensionWithVehicleCapacity(
         demand_callback_index,
         0,  # null capacity slack
-        [16] * num_vehicles,  # vehicle capacity of 200 bike batteries
+        [14] * num_vehicles,  #arbitrary capacity
         True,  # start cumul to zero
         "Capacity"
     )
