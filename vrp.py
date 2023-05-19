@@ -120,8 +120,8 @@ def print_solution(manager, routing, solution, locations, database):
     base_map = folium.Map(location=[locations['lat'].mean(), locations['lon'].mean()], zoom_start=13)
     for vehicle_id, route in vehicle_routes.items():
         folium.PolyLine(route, color=colors[vehicle_id % len(colors)], weight=2.5, opacity=1).add_to(base_map)
-        first_location = route[0]
-        folium.Marker(first_location, popup=f'Vehicle {vehicle_id + 1}', icon=folium.Icon(color=colors[vehicle_id % len(colors)])).add_to(base_map)
+        marker = route[-1]
+        folium.Marker(marker, popup=f'Vehicle {vehicle_id + 1}', icon=folium.Icon(color=colors[vehicle_id % len(colors)])).add_to(base_map)
     base_map.save('routes.html')
 
 
