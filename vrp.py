@@ -76,21 +76,33 @@ def weighted_distance_callback(manager, database, locations, from_index, to_inde
     return int(weighted_distance)
 
 
+from collections import defaultdict
+import folium
+
 def print_solution(manager, routing, solution, locations, database):
     """Prints the solution."""
     print(f"Objective: {solution.ObjectiveValue()} units")
     capacity_dimension = routing.GetDimensionOrDie("Capacity")
-    
+
+    # dictionary to hold the route of each vehicle
+    vehicle_routes = defaultdict(list)
+
+    colors = ['red', 'blue', 'green', 'purple', 'orange', 'darkred',
+              'lightred', 'beige', 'darkblue', 'darkgreen', 'cadetblue',
+              'darkpurple', 'pink', 'lightblue', 'lightgreen',
+              'gray', 'black', 'lightgray']
+
     for vehicle_id in range(manager.GetNumberOfVehicles()):
         index = routing.Start(vehicle_id)
         plan_output = f"Route for vehicle {vehicle_id}:\n"
         route_distance = 0
         while not routing.IsEnd(index):
             node_index = manager.IndexToNode(index)
+            current_location = locations.iloc[node_index]
+            vehicle_routes[vehicle_id].append((current_location['lat'], current_location['lon']))
+
             next_node_index = manager.IndexToNode(solution.Value(routing.NextVar(index)))
             route_distance += weighted_distance_callback(manager, database, locations, index, solution.Value(routing.NextVar(index)))
-            current_location = locations.iloc[node_index]
-            next_location = locations.iloc[next_node_index]
             
             load = solution.Value(capacity_dimension.CumulVar(index))
             plan_output += f"{current_location['name']} ({current_location['id']}) Load: {load} -> "
@@ -103,6 +115,16 @@ def print_solution(manager, routing, solution, locations, database):
         plan_output += f"Total load of the route: {last_load}\n"
         
         print(plan_output)
+
+    # plot the routes
+    base_map = folium.Map(location=[locations['lat'].mean(), locations['lon'].mean()], zoom_start=13)
+    for vehicle_id, route in vehicle_routes.items():
+        folium.PolyLine(route, color=colors[vehicle_id % len(colors)], weight=2.5, opacity=1).add_to(base_map)
+        first_location = route[0]
+        folium.Marker(first_location, popup=f'Vehicle {vehicle_id + 1}', icon=folium.Icon(color=colors[vehicle_id % len(colors)])).add_to(base_map)
+    base_map.save('routes.html')
+
+
 
 def demand_callback(database, manager, node):
     """Returns the demand of the node."""
@@ -137,7 +159,7 @@ def modelling():
     model.AddDimensionWithVehicleCapacity(
         demand_callback_index,
         0,  # null capacity slack
-        [14] * num_vehicles,  #arbitrary capacity
+        [16] * num_vehicles,  #arbitrary capacity
         True,  # start cumul to zero
         "Capacity"
     )
