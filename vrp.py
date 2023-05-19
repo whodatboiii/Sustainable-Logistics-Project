@@ -12,29 +12,6 @@ from math import radians, sin, cos, sqrt, atan2
 #Stop the warnings 
 warnings.simplefilter(action='ignore', category=UserWarning)
 
-def generate_random_customers(center_lat, center_lon, min_radius, max_radius, num_customers):
-    """Generate random customer positions within a circle with radius around a center point."""
-    radii = np.random.uniform(min_radius, max_radius, num_customers)
-    angles = np.random.uniform(0, 2 * np.pi, num_customers)
-    
-    customer_lats = center_lat + (radii * np.sin(angles)) / 111.32
-    customer_lons = center_lon + (radii * np.cos(angles)) / (111.32 * np.cos(np.radians(center_lat)))
-
-    customers = pd.DataFrame({'lat': customer_lats, 'lon': customer_lons})
-    return customers
-
-def generate_all_customers(locations, min_radius, max_radius, num_customers_per_station):
-    all_customers = []
-
-    for _, location in locations.iterrows():
-        station_customers = generate_random_customers(location['lat'], location['lon'], min_radius, max_radius, num_customers_per_station)
-        all_customers.append(station_customers)
-
-    all_customers_df = pd.concat(all_customers, ignore_index=True)
-    all_customers_df['id'] = np.arange(1, len(all_customers_df) + 1)
-    
-    return all_customers_df
-
 def project_data(num_customers_per_station=100):
     """Import the data"""
     database = pd.read_csv("opti.csv")
@@ -58,9 +35,8 @@ def project_data(num_customers_per_station=100):
     max_radius = 150 / 1000
 
     # Generate customer positions
-    customers = generate_all_customers(locations, min_radius, max_radius, num_customers_per_station)
 
-    return database, locations, customers
+    return database, locations
 
 def add_warehouse(locations, warehouse_loc):
     locations = pd.concat([locations, warehouse_loc], ignore_index=True)
@@ -76,7 +52,7 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * atan2(sqrt(a), sqrt(1 - a))
     return R * c
 
-def weighted_distance_callback(manager, database, locations, from_index, to_index, num_customers_per_station):
+def weighted_distance_callback(manager, database, locations, from_index, to_index):
     """Returns the weighted distance between two locations considering charging cost and popularity."""
     from_node = manager.IndexToNode(from_index)
     to_node = manager.IndexToNode(to_index)
@@ -91,9 +67,7 @@ def weighted_distance_callback(manager, database, locations, from_index, to_inde
             charge_cost = 5 #arbitrary
             charging_time = 1 * database.at[to_node, 'count']
             weighted_distance = distance * popularity_weight + charge_cost + charging_time
-            # Generate customer positions
-            customers = generate_all_customers(locations, min_radius=0.0001, max_radius=0.1, num_customers_per_station=100)
-            weighted_distance += len(customers) 
+
         else:
             weighted_distance = distance
     else:
@@ -102,7 +76,7 @@ def weighted_distance_callback(manager, database, locations, from_index, to_inde
     return int(weighted_distance)
 
 
-def print_solution_with_customers(manager, routing, solution, locations, database, num_customers_per_station):
+def print_solution(manager, routing, solution, locations, database):
     """Prints the solution."""
     print(f"Objective: {solution.ObjectiveValue()} units")
     capacity_dimension = routing.GetDimensionOrDie("Capacity")
@@ -114,7 +88,7 @@ def print_solution_with_customers(manager, routing, solution, locations, databas
         while not routing.IsEnd(index):
             node_index = manager.IndexToNode(index)
             next_node_index = manager.IndexToNode(solution.Value(routing.NextVar(index)))
-            route_distance += weighted_distance_callback(manager, database, locations, index, solution.Value(routing.NextVar(index)), num_customers_per_station)
+            route_distance += weighted_distance_callback(manager, database, locations, index, solution.Value(routing.NextVar(index)))
             current_location = locations.iloc[node_index]
             next_location = locations.iloc[next_node_index]
             
@@ -138,7 +112,7 @@ def demand_callback(database, manager, node):
 
 
 def modelling():
-    database, locations, customers = project_data()
+    database, locations = project_data()
 
     warehouse_loc = pd.DataFrame({'id': ['9999'], 'name': ['Warehouse'], 'lat': [46.9489], 'lon': [7.4378]})
     locations = add_warehouse(locations, warehouse_loc)
@@ -179,7 +153,7 @@ def modelling():
 
     if solution:
         # Print the solution
-        print_solution_with_customers(manager=manager, routing=model, solution=solution, locations=locations, database=database, num_customers_per_station=100)
+        print_solution(manager=manager, routing=model, solution=solution, locations=locations, database=database)
     else:
         print('No solution found.')
 
