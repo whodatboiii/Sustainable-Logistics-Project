@@ -136,9 +136,7 @@ def main():
   stations = list(range(best_stationsss))
     
   distance = distance_matrix
-  
-  #Setting a maximum capacity for all stations 
-  max_capacity= 40 
+ 
 
   #Maximum distance travelled by bike user 
   max_distance = 23 #(sqrt of 500)
