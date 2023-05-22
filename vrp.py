@@ -159,7 +159,7 @@ def modelling():
     model.AddDimensionWithVehicleCapacity(
         demand_callback_index,
         0,  # null capacity slack
-        [16] * num_vehicles,  #arbitrary capacity
+        [20] * num_vehicles,  #arbitrary capacity
         True,  # start cumul to zero
         "Capacity"
     )
